@@ -59,18 +59,59 @@ export default function Home() {
     setImageB64(b64); setMime(m); setResult(null); setError(null);
   }, []);
 
+  // Compress image to stay under Vercel's 4.5MB body limit
+  const compressImage = (b64: string, mimeType: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        // Max dimension 1200px
+        const maxDim = 1200;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        // JPEG at 80% quality — well under the limit
+        const compressed = canvas.toDataURL("image/jpeg", 0.80);
+        resolve(compressed.split(",")[1]);
+      };
+      img.src = `data:${mimeType};base64,${b64}`;
+    });
+  };
+
   const generate = async () => {
     if (!imageB64) return;
     setLoading(true); setError(null); setResult(null);
     try {
+      // Always compress before sending
+      const compressed = await compressImage(imageB64, mime);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: imageB64, mediaType: mime, framework, apiKey: apiKey || undefined }),
+        body: JSON.stringify({
+          imageBase64: compressed,
+          mediaType: "image/jpeg",
+          framework,
+          apiKey: apiKey || undefined,
+        }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setResult(data);
+      // Handle non-JSON responses (e.g. Vercel 413 / 500 HTML pages)
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        if (res.status === 413) throw new Error("Image too large. Try a smaller or lower-resolution photo.");
+        throw new Error(`Server error (${res.status}). Check your API key.`);
+      }
+      if (!res.ok) throw new Error((data.error as string) || "Generation failed");
+      setResult(data as unknown as Result);
       setActiveTab("code");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
