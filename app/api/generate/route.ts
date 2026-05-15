@@ -151,11 +151,22 @@ export async function POST(req: NextRequest) {
     // ── Choose provider
     if (googleKey) {
       const result = await generateWithGemini(imageBase64, mediaType, fw, googleKey);
+      // Record to history (fire and forget)
+      fetch(new URL("/api/history", req.url).toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ framework: fw, tokens: result.usage.output_tokens, provider: "gemini", success: true }),
+      }).catch(() => {/* ignore */});
       return NextResponse.json({ ...result, framework: fw, provider: "gemini" });
     }
 
     if (anthropicKey) {
       const result = await generateWithAnthropic(imageBase64, mediaType, fw, anthropicKey);
+      fetch(new URL("/api/history", req.url).toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ framework: fw, tokens: result.usage.output_tokens, provider: "anthropic", success: true }),
+      }).catch(() => {/* ignore */});
       return NextResponse.json({ ...result, framework: fw, provider: "anthropic" });
     }
 
