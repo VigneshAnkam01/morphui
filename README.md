@@ -1,91 +1,198 @@
-# SketchToCode ⚡
+# morphui
 
-> **Transform any sketch, wireframe, or napkin drawing into production-ready UI code using Claude AI.**
+> **Turn any wireframe or sketch into production-ready UI code instantly.**
+> Powered by Google Gemini Vision AI (free tier) · Built with Next.js 15
 
-![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
-![Anthropic](https://img.shields.io/badge/Claude-claude--opus--4--5-orange?logo=anthropic)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)
-
----
-
-## ✨ Features
-
-- 🖼️ **Upload any sketch** — drag & drop PNG, JPG, WebP, or photograph a whiteboard
-- 🤖 **Claude Vision AI** — claude-opus-4-5 reads and understands your layout
-- 💻 **3 output formats** — Pure HTML/CSS, Tailwind HTML, or React + Tailwind JSX
-- 👁️ **Live preview** — See the rendered UI in-browser instantly
-- 📋 **Copy & Download** — One-click copy or download as `.html`/`.tsx`
-- 🎨 **Example sketches** — Built-in canvas-drawn examples to try without uploading
+![morphui](https://img.shields.io/badge/morphui-v1.0-8b5cf6?style=for-the-badge&logo=vercel)
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=for-the-badge&logo=typescript)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
 ---
 
-## 🚀 Quick Start
+## What is morphui?
 
-### 1. Clone & Install
-\`\`\`bash
-git clone https://github.com/yourusername/sketch-to-code
-cd sketch-to-code
+morphui is an AI-powered web application that converts hand-drawn sketches, wireframes, napkin drawings, or any UI mockup image into production-ready code — in seconds.
+
+Upload an image → select your framework → get clean, usable code.
+
+---
+
+## Features
+
+- **AI Vision Analysis** — Google Gemini 1.5 Flash (free) or Claude claude-opus-4-5 reads your sketch
+- **3 Output Frameworks** — Plain HTML/CSS · Tailwind CSS · React + Tailwind
+- **Live Preview** — Rendered iframe preview of generated code
+- **Syntax Highlighting** — Copy or download the output
+- **Admin Dashboard** — Password-protected panel at `/admin`
+- **AI Admin Assistant** — Chat with Claude to modify the codebase
+- **Generation History** — Supabase database logs every generation
+- **Auto DB Cleanup** — Vercel cron deletes records older than 30 days
+- **Health Monitoring** — `/api/health` endpoint for uptime tracking
+- **Interactive Background** — Canvas particle system with mouse interaction
+- **Fully Responsive** — Works on PC, tablet, and mobile
+- **Hidden Admin Access** — Triple-click the dot in footer to reveal admin link
+
+---
+
+## Quick Start
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/YOUR_USERNAME/morphui.git
+cd morphui
+```
+
+### 2. Install dependencies
+
+```bash
 npm install
-\`\`\`
+```
 
-### 2. Set Environment Variable
-\`\`\`bash
+### 3. Set up environment variables
+
+```bash
 cp .env.local.example .env.local
-# Edit .env.local and add your Anthropic API key
-# Get one free at: https://console.anthropic.com
-\`\`\`
+```
 
-\`\`\`.env.local
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-\`\`\`
+Edit `.env.local`:
 
-### 3. Run Locally
-\`\`\`bash
+```env
+# Option A — Google Gemini (FREE at aistudio.google.com)
+GOOGLE_API_KEY=AIzaSy...
+
+# Option B — Anthropic Claude
+ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Admin credentials
+ADMIN_USER=admin
+ADMIN_PASS=morphui@2026
+
+# Supabase (optional — for generation history)
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+```
+
+### 4. Run locally
+
+```bash
 npm run dev
-# Open http://localhost:3000
-\`\`\`
+```
+
+Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🌐 Deploy to Vercel (Free)
+## Admin Dashboard
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/sketch-to-code)
+Access at `/admin/login`
 
-1. Push this repo to GitHub
-2. Go to [vercel.com](https://vercel.com) → Import Project
-3. Add `ANTHROPIC_API_KEY` in Environment Variables
-4. Click Deploy — done!
+| Field    | Value          |
+|----------|----------------|
+| Username | `admin`        |
+| Password | `morphui@2026` |
+
+**Hidden access:** Triple-click the small dot at the bottom of the main page footer.
+
+The admin panel includes:
+- System health checks
+- Generation history table
+- Configuration viewer
+- **AI Assistant** — Ask Claude anything about the codebase to modify it live
 
 ---
 
-## 🏗️ Architecture
+## API Routes
 
-\`\`\`
-sketch-to-code/
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/health` | System health + uptime |
+| `GET` | `/api/history` | Generation history from DB |
+| `POST` | `/api/generate` | Convert image → code |
+| `POST` | `/api/admin/auth` | Admin login |
+| `DELETE` | `/api/admin/auth` | Admin logout |
+| `POST` | `/api/admin/assistant` | AI assistant (admin only) |
+
+---
+
+## Deploy to Vercel (Free — 24/7)
+
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+Or connect your GitHub repo at [vercel.com](https://vercel.com) and set the env vars in the dashboard.
+
+The app runs **serverlessly on Vercel** — it keeps working even when your PC is off.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 15 (App Router, Turbopack) |
+| Language | TypeScript |
+| Styling | Tailwind CSS + Custom CSS |
+| AI (primary) | Google Gemini 1.5 Flash (free) |
+| AI (fallback) | Anthropic Claude claude-opus-4-5 |
+| Database | Supabase (PostgreSQL, free tier) |
+| Hosting | Vercel (free tier) |
+| Auth | HTTP-only cookie sessions |
+| Canvas | HTML5 Canvas API |
+
+---
+
+## Project Structure
+
+```
+morphui/
 ├── app/
-│   ├── api/generate/route.ts   # Claude API call (server-side)
+│   ├── admin/
+│   │   ├── login/page.tsx      # Admin login
+│   │   └── page.tsx            # Admin dashboard
+│   ├── api/
+│   │   ├── admin/
+│   │   │   ├── assistant/      # AI assistant (admin only)
+│   │   │   └── auth/           # Login / logout
+│   │   ├── generate/           # Core AI vision route
+│   │   ├── health/             # Health check
+│   │   └── history/            # DB history
 │   ├── components/
-│   │   ├── Header.tsx          # Nav header
-│   │   ├── UploadZone.tsx      # Drag & drop image upload
-│   │   ├── CodeViewer.tsx      # Syntax-highlighted output + preview
-│   │   └── Extras.tsx          # Example sketches + responsive controls
+│   │   ├── AIAssistant.tsx     # Floating admin chat
+│   │   ├── Background.tsx      # Particle canvas
+│   │   ├── CodeViewer.tsx      # Syntax highlighted output
+│   │   ├── Examples.tsx        # Example sketches
+│   │   ├── Header.tsx          # Navigation
+│   │   └── UploadZone.tsx      # Drag & drop
 │   ├── globals.css             # Design system
-│   ├── layout.tsx              # Root layout + metadata
+│   ├── layout.tsx              # Root layout + SEO
 │   └── page.tsx                # Main page
-├── .env.local.example          # Environment template
-├── vercel.json                 # Vercel config
-└── next.config.ts
-\`\`\`
+├── tests/
+│   └── run-tests.mjs           # 33-test suite (31 passing)
+├── middleware.ts               # Admin route protection
+├── vercel.json                 # Cron + deployment config
+└── docs/                       # Full documentation
+```
 
 ---
 
-## 🔐 API Key Security
+## Running Tests
 
-Your API key is **never exposed to the browser**. All calls to Anthropic are made server-side via the Next.js API route (`/api/generate`). The image is sent to the server, Claude processes it, and only the generated code is returned to the client.
+```bash
+# Start dev server first
+npm run dev
+
+# In another terminal
+node tests/run-tests.mjs
+```
+
+Expected output: **31/31 passed**, 2 skipped (require API key)
 
 ---
 
-## 📄 License
+## License
 
-MIT — free to use, modify, and deploy.
+MIT — built by [Myth](https://github.com/YOUR_USERNAME)

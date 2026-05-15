@@ -1,0 +1,169 @@
+MORPHUI — COMPLETE PROJECT OVERVIEW
+=====================================
+Version: 1.0
+Author: Myth
+Built with: Next.js 15, Google Gemini AI, Supabase, Vercel
+
+
+WHAT IS THIS PROJECT?
+----------------------
+morphui is a web application that uses AI vision to read your sketches
+and wireframes and convert them into real, working code.
+
+You draw (or photograph) a UI layout. You upload it. The AI reads it
+and writes HTML, Tailwind CSS, or React code that matches what you drew.
+
+Think of it as "napkin to production" — from a rough drawing to deployable code in seconds.
+
+
+HOW IT WORKS (SIMPLE EXPLANATION)
+-----------------------------------
+1. You open the website at morphui.vercel.app
+2. You upload a photo of your UI sketch (whiteboard, paper, Figma wireframe screenshot)
+3. You choose your output format: HTML, Tailwind, or React
+4. You click "Generate Code"
+5. The app sends your image to Google Gemini AI
+6. Gemini reads the sketch and writes real code for it
+7. The code appears in a viewer with syntax highlighting
+8. You can preview it live in an iframe, copy it, or download it
+
+
+THE TECHNOLOGY STACK
+---------------------
+- FRONTEND: Next.js 15 with TypeScript and Tailwind CSS
+  The website itself is built using these tools. Next.js is a React
+  framework used by major companies. TypeScript makes the code safer.
+
+- AI ENGINE: Google Gemini 1.5 Flash (free tier)
+  This is the AI model that "reads" the image and writes the code.
+  It's Google's multimodal AI — it understands both images and text.
+  Fallback: Anthropic Claude claude-opus-4-5 (if Anthropic key is provided)
+
+- DATABASE: Supabase (free PostgreSQL)
+  Stores a history of every generation — framework used, tokens consumed,
+  timestamp, and whether it succeeded. Automatically cleaned up every 30 days.
+
+- HOSTING: Vercel (free tier)
+  The app runs on Vercel's global serverless network. This means:
+  - It works 24/7 even when your PC is off
+  - It scales automatically — 1 user or 10,000, same performance
+  - It's free up to 100GB bandwidth per month
+
+
+THE PAGES
+-----------
+/ (Main Page)
+  The tool itself. Upload zone, framework selector, code viewer, live preview.
+
+/admin/login
+  Password-protected admin access. Only you can log in.
+  Username: admin
+  Password: morphui@2026
+
+/admin
+  The admin dashboard. Shows:
+  - System health (is the server up? is the DB connected?)
+  - Generation history (who used the app, when, how many tokens)
+  - Configuration status (which environment variables are set)
+  - Quick actions (run health check, view history API, run cleanup)
+  - AI Assistant (a floating chat panel powered by Claude — ask it
+    anything and it will suggest code changes for the project)
+
+/api/health
+  Returns JSON showing server uptime, database status, generation counts.
+  Used by UptimeRobot to monitor if the site is alive.
+
+/api/generate
+  The core API. Receives a base64 image + framework choice,
+  sends to AI, returns the generated code.
+
+/api/history
+  Returns the last N generations from the Supabase database.
+
+/api/admin/auth
+  POST to log in, DELETE to log out. Sets/clears an httpOnly cookie.
+
+/api/admin/assistant
+  Admin-only. Sends your prompt to Claude with full project context.
+  Claude responds with code suggestions, explanations, or fixes.
+
+
+SECURITY
+---------
+- Admin routes protected by middleware — redirect to /login without cookie
+- Session cookie is httpOnly (can't be read by JavaScript)
+- API key never sent to client — stored server-side only
+- Input validation on all API routes
+- SQL injection and XSS attempts return safe JSON errors
+- Admin AI assistant requires valid session cookie
+
+
+TESTING
+--------
+The project has 33 automated tests in tests/run-tests.mjs.
+31 pass automatically. 2 require a live API key (skipped).
+
+Test categories:
+- Server availability (all routes return correct status codes)
+- Admin authentication (login/logout/cookie/wrong password)
+- Admin AI assistant (auth required, empty prompt rejected)
+- Code generation API (missing image, invalid base64, no key)
+- Framework validation (html/tailwind/react all accepted)
+- Security (protected routes, injection attempts)
+- Response headers (correct Content-Type on all routes)
+- 404 handling (unknown routes return 404)
+- Performance (all routes respond within 2 seconds)
+
+
+THE BACKGROUND EFFECT
+----------------------
+The dark animated background with floating dots and lines is a custom
+HTML5 Canvas particle system. It:
+- Creates 80 floating particles that drift slowly
+- Particles connect to each other with faint lines when close
+- When you move the mouse, particles are gently pushed away
+- A purple glow follows your cursor
+- All drawn at 60fps using requestAnimationFrame
+
+
+HOW TO RUN LOCALLY
+--------------------
+1. git clone https://github.com/YOUR_USERNAME/morphui.git
+2. cd morphui
+3. npm install
+4. Copy .env.local.example to .env.local
+5. Add your GOOGLE_API_KEY (free from aistudio.google.com)
+6. npm run dev
+7. Open http://localhost:3000
+
+
+HOW TO DEPLOY (FREE, PERMANENT)
+---------------------------------
+1. Push code to GitHub
+2. Go to vercel.com → New Project → Import from GitHub
+3. Set environment variables in Vercel dashboard:
+   GOOGLE_API_KEY=your_key_here
+   ADMIN_PASS=morphui@2026
+4. Click Deploy
+5. Your site is live at yourproject.vercel.app — forever, even when PC is off
+
+
+THE ADMIN HIDDEN ACCESS
+------------------------
+On the main page footer, there is a tiny invisible dot.
+Triple-click it and a link to /admin/login will appear.
+This keeps the admin login hidden from regular users.
+
+
+CREDITS & PURPOSE
+------------------
+This project was built as a showcase of:
+- Full-stack Next.js development
+- AI vision API integration (Gemini + Claude)
+- Secure admin systems
+- Modern dark UI design
+- Serverless deployment architecture
+- Automated testing
+
+It demonstrates real-world skills in: TypeScript, React, API design,
+database integration, authentication, cloud deployment, and AI engineering.

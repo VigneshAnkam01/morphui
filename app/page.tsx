@@ -109,35 +109,33 @@ export default function Home() {
         {!apiKey && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, padding: "0 20px" }}>
             {!showApiInput ? (
-              <button
-                onClick={() => setShowApiInput(true)}
-                style={{
-                  cursor: "pointer", border: "1px solid rgba(251,191,36,0.25)",
-                  background: "rgba(251,191,36,0.06)", padding: "6px 16px",
-                  borderRadius: 99, fontSize: 12, color: "var(--amber)",
-                  fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
-                }}
-              >
-                ⚠ Set Anthropic API key
-              </button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ cursor: "pointer", border: "1px solid rgba(34,211,238,0.25)", background: "rgba(34,211,238,0.06)", padding: "6px 14px", borderRadius: 99, fontSize: 12, color: "var(--cyan)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
+                >
+                  ✦ Get free Gemini API key
+                </a>
+                <button
+                  onClick={() => setShowApiInput(true)}
+                  style={{ cursor: "pointer", border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)", padding: "6px 14px", borderRadius: 99, fontSize: 12, color: "var(--amber)", fontWeight: 600 }}
+                >
+                  ⚠ Enter API key
+                </button>
+              </div>
             ) : (
-              <div style={{
-                display: "flex", gap: 8, alignItems: "center",
-                background: "var(--card)", border: "1px solid var(--border-hi)",
-                borderRadius: 12, padding: "8px 12px",
-                width: "100%", maxWidth: 480,
-              }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", background: "var(--card)", border: "1px solid var(--border-hi)", borderRadius: 12, padding: "8px 12px", width: "100%", maxWidth: 500 }}>
+                <span style={{ fontSize: 11, color: "var(--text3)", whiteSpace: "nowrap" }}>AIza… or sk-ant…</span>
                 <input
                   id="api-key-input"
                   type="password"
-                  placeholder="sk-ant-api03-..."
+                  placeholder="Paste Gemini (AIza…) or Anthropic (sk-ant…) key"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && setShowApiInput(false)}
-                  style={{
-                    flex: 1, background: "none", border: "none", outline: "none",
-                    color: "var(--text)", fontSize: 13, fontFamily: "var(--mono)",
-                  }}
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text)", fontSize: 13, fontFamily: "var(--mono)" }}
                   autoFocus
                 />
                 <button onClick={() => setShowApiInput(false)} className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }}>

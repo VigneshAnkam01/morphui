@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@types/react-syntax-highlighter": "^15.5.13",
     "lucide-react": "^1.16.0",

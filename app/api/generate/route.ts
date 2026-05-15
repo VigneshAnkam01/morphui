@@ -1,101 +1,174 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// ─────────────────────────────────────────────────────────────
+//  morphui — /api/generate
+//  Supports two AI providers:
+//    1. Google Gemini  (GOOGLE_API_KEY)  — FREE tier available
+//    2. Anthropic Claude (ANTHROPIC_API_KEY) — fallback
+//  Client can also pass their own key in the request body.
+// ─────────────────────────────────────────────────────────────
+
+const FRAMEWORK_PROMPTS: Record<string, string> = {
+  html: `You are an expert frontend developer. Convert this wireframe/sketch into clean, production-ready HTML + CSS.
+Requirements:
+- Single self-contained HTML file with embedded <style>
+- Modern responsive design, dark or light as fits the sketch
+- Clean semantic HTML5
+- Smooth hover effects and transitions
+- No placeholder images — use CSS shapes/gradients instead
+- Return ONLY the HTML code, no explanation, no markdown fences`,
+
+  tailwind: `You are an expert frontend developer. Convert this wireframe/sketch into production-ready HTML using Tailwind CSS.
+Requirements:
+- Single HTML file with Tailwind CDN included
+- Faithful to the sketch layout and structure
+- Responsive (mobile-first)
+- Dark mode friendly
+- Return ONLY the HTML code, no explanation, no markdown fences`,
+
+  react: `You are an expert React developer. Convert this wireframe/sketch into a production-ready React component.
+Requirements:
+- Functional component named GeneratedUI
+- Use Tailwind CSS for styling
+- Responsive and accessible
+- Include all sub-components inline in the same file
+- No external dependencies except React and Tailwind
+- Return ONLY the JSX/TSX code, no explanation, no markdown fences`,
+};
+
+async function generateWithGemini(
+  imageBase64: string,
+  mediaType: string,
+  framework: string,
+  apiKey: string
+): Promise<{ code: string; usage: { input_tokens: number; output_tokens: number } }> {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = FRAMEWORK_PROMPTS[framework] ?? FRAMEWORK_PROMPTS.html;
+
+  const result = await model.generateContent([
+    { text: prompt },
+    {
+      inlineData: {
+        mimeType: mediaType as "image/png" | "image/jpeg" | "image/webp",
+        data: imageBase64,
+      },
+    },
+  ]);
+
+  const response = result.response;
+  const text = response.text();
+
+  // Strip markdown fences if model included them
+  const code = text
+    .replace(/^```(?:html|jsx|tsx|react)?\n?/i, "")
+    .replace(/\n?```$/i, "")
+    .trim();
+
+  return {
+    code,
+    usage: {
+      input_tokens: response.usageMetadata?.promptTokenCount ?? 0,
+      output_tokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+    },
+  };
+}
+
+async function generateWithAnthropic(
+  imageBase64: string,
+  mediaType: string,
+  framework: string,
+  apiKey: string
+): Promise<{ code: string; usage: { input_tokens: number; output_tokens: number } }> {
+  const Anthropic = (await import("@anthropic-ai/sdk")).default;
+  const client = new Anthropic({ apiKey });
+
+  const prompt = FRAMEWORK_PROMPTS[framework] ?? FRAMEWORK_PROMPTS.html;
+
+  const message = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 4096,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType as "image/png" | "image/jpeg" | "image/gif" | "image/webp",
+              data: imageBase64,
+            },
+          },
+          { type: "text", text: prompt },
+        ],
+      },
+    ],
+  });
+
+  const content = message.content[0];
+  const rawCode = content.type === "text" ? content.text : "";
+  const code = rawCode
+    .replace(/^```(?:html|jsx|tsx|react)?\n?/i, "")
+    .replace(/\n?```$/i, "")
+    .trim();
+
+  return {
+    code,
+    usage: {
+      input_tokens: message.usage.input_tokens,
+      output_tokens: message.usage.output_tokens,
+    },
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64, mediaType, framework } = await req.json();
+    const { imageBase64, mediaType, framework, apiKey: clientKey } = await req.json();
 
-    if (!imageBase64 || !mediaType) {
-      return NextResponse.json(
-        { error: "Image data is required" },
-        { status: 400 }
-      );
+    if (!imageBase64) {
+      return NextResponse.json({ error: "imageBase64 is required" }, { status: 400 });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY is not configured" },
-        { status: 500 }
-      );
+    if (!mediaType) {
+      return NextResponse.json({ error: "mediaType is required" }, { status: 400 });
     }
 
-    const frameworkInstructions: Record<string, string> = {
-      html: `Generate a complete, self-contained HTML file with embedded CSS and JavaScript. 
-             Use modern CSS with flexbox/grid. Make it visually stunning with gradients, shadows, and animations.
-             Return ONLY the HTML code, no markdown fences.`,
-      react: `Generate a complete React functional component using Tailwind CSS classes.
-              Include all imports at the top. The component should be named 'GeneratedUI' and exported as default.
-              Return ONLY the JSX/TSX code, no markdown fences.`,
-      tailwind: `Generate a complete HTML file using Tailwind CSS CDN classes.
-                 Include <script src="https://cdn.tailwindcss.com"></script> in the head.
-                 Make it fully responsive and beautiful.
-                 Return ONLY the HTML code, no markdown fences.`,
-    };
+    const fw = ["html", "tailwind", "react"].includes(framework) ? framework : "html";
 
-    const selectedFramework = framework || "html";
-    const instructions =
-      frameworkInstructions[selectedFramework] ||
-      frameworkInstructions["html"];
+    // ── Key resolution: client key → env Gemini → env Anthropic
+    const googleKey = clientKey?.startsWith("AIza")
+      ? clientKey
+      : process.env.GOOGLE_API_KEY;
 
-    const message = await client.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: imageBase64,
-              },
-            },
-            {
-              type: "text",
-              text: `You are an expert UI/UX developer. Analyze this sketch/wireframe/mockup image carefully and generate production-quality UI code that accurately represents the design.
+    const anthropicKey = clientKey && !clientKey.startsWith("AIza")
+      ? clientKey
+      : process.env.ANTHROPIC_API_KEY;
 
-Instructions:
-- Identify all UI elements: navigation, buttons, forms, cards, text areas, images, etc.
-- Implement a modern, beautiful design with proper spacing, typography, and colors
-- Use a cohesive color scheme (prefer dark or vibrant modern palettes)
-- Make it fully responsive
-- Add hover effects and micro-animations where appropriate
-- ${instructions}
+    // ── Choose provider
+    if (googleKey) {
+      const result = await generateWithGemini(imageBase64, mediaType, fw, googleKey);
+      return NextResponse.json({ ...result, framework: fw, provider: "gemini" });
+    }
 
-Important: Output ONLY the code. No explanations, no markdown code blocks, just raw code.`,
-            },
-          ],
-        },
-      ],
-    });
+    if (anthropicKey) {
+      const result = await generateWithAnthropic(imageBase64, mediaType, fw, anthropicKey);
+      return NextResponse.json({ ...result, framework: fw, provider: "anthropic" });
+    }
 
-    const generatedCode =
-      message.content[0].type === "text" ? message.content[0].text : "";
-
-    // Clean up any accidental markdown fences
-    const cleanedCode = generatedCode
-      .replace(/^```[\w]*\n?/gm, "")
-      .replace(/```$/gm, "")
-      .trim();
-
-    return NextResponse.json({
-      code: cleanedCode,
-      framework: selectedFramework,
-      usage: message.usage,
-    });
-  } catch (error) {
-    console.error("Generation error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: `Failed to generate code: ${errorMessage}` },
+      {
+        error:
+          "No API key configured. Set GOOGLE_API_KEY (free at aistudio.google.com) or ANTHROPIC_API_KEY in your .env.local file, or enter one in the app.",
+      },
       { status: 500 }
     );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[/api/generate]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
