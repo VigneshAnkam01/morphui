@@ -58,6 +58,7 @@ export default function AdminDashboard() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -86,6 +87,18 @@ export default function AdminDashboard() {
     await fetch("/api/admin/auth", { method: "DELETE" });
     router.push("/admin/login");
     router.refresh();
+  };
+
+  const runCleanup = async () => {
+    try {
+      const res = await fetch("/api/cleanup", { method: "POST" });
+      const data = await res.json();
+      setActionMsg({ text: data.message || "Cleanup complete!", ok: data.success });
+      setTimeout(() => setActionMsg(null), 5000);
+    } catch {
+      setActionMsg({ text: "Cleanup failed — check logs", ok: false });
+      setTimeout(() => setActionMsg(null), 4000);
+    }
   };
 
   const fmtUptime = (s: number) => {
@@ -185,12 +198,12 @@ export default function AdminDashboard() {
             <div style={{ fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 14 }}>Configuration</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {[
-                { key: "ANTHROPIC_API_KEY", val: "sk-ant-••••••••", ok: true },
-                { key: "ADMIN_USER",        val: "admin",           ok: true },
-                { key: "ADMIN_PASS",        val: "••••••••••",      ok: true },
-                { key: "SUPABASE_URL",      val: "Set in .env.local", ok: false },
-                { key: "SUPABASE_ANON_KEY", val: "Set in .env.local", ok: false },
-                { key: "NODE_ENV",          val: process.env.NODE_ENV ?? "development", ok: true },
+                { key: "GOOGLE_API_KEY",    val: "AIza••••••••",        ok: true },
+                { key: "ADMIN_USER",         val: "admin",               ok: true },
+                { key: "ADMIN_PASS",         val: "••••••••••",          ok: true },
+                { key: "SUPABASE_URL",       val: "Set in Vercel env",   ok: false },
+                { key: "SUPABASE_ANON_KEY",  val: "Set in Vercel env",   ok: false },
+                { key: "NODE_ENV",           val: process.env.NODE_ENV ?? "development", ok: true },
               ].map(item => (
                 <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)" }}>
                   <code style={{ fontSize: 11, color: S.text2, fontFamily: "JetBrains Mono, monospace" }}>{item.key}</code>
@@ -245,13 +258,19 @@ export default function AdminDashboard() {
           )}
         </div>
 
+        {/* Action feedback toast */}
+        {actionMsg && (
+          <div style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 18px", borderRadius: 12, zIndex: 999, fontSize: 13, fontWeight: 600, background: actionMsg.ok ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.12)", border: `1px solid ${actionMsg.ok ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)"}`, color: actionMsg.ok ? S.green : S.red, boxShadow: "0 8px 30px rgba(0,0,0,0.4)" }}>
+            {actionMsg.ok ? "✓" : "✗"} {actionMsg.text}
+          </div>
+        )}
+
         {/* Quick actions */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginTop: 14 }}>
           {[
-            { label: "View Main App",  href: "/",              color: S.purple },
-            { label: "Run Cleanup",    href: "/api/cleanup",   color: S.cyan },
-            { label: "Health Check",   href: "/api/health",    color: S.green },
-            { label: "View History",   href: "/api/history",   color: S.amber },
+            { label: "View Main App",  href: "/",             color: S.purple, action: null },
+            { label: "Health Check",   href: "/api/health",   color: S.green,  action: null },
+            { label: "View History",   href: "/api/history",  color: S.amber,  action: null },
           ].map(action => (
             <a
               key={action.label}
@@ -272,6 +291,22 @@ export default function AdminDashboard() {
               {action.label} ↗
             </a>
           ))}
+          <button
+            onClick={runCleanup}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "12px 16px", borderRadius: 10,
+              border: `1px solid ${S.cyan}33`,
+              background: `${S.cyan}0d`,
+              color: S.cyan, fontWeight: 600, fontSize: 13,
+              cursor: "pointer", fontFamily: "'Inter', sans-serif",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { (e.currentTarget.style.background = `${S.cyan}1a`); }}
+            onMouseLeave={e => { (e.currentTarget.style.background = `${S.cyan}0d`); }}
+          >
+            Run Cleanup ↺
+          </button>
         </div>
       </main>
 
