@@ -106,6 +106,47 @@ async function generateWithGemini(
 ): Promise<{ code: string; usage: { input_tokens: number; output_tokens: number } }> {
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(apiKey);
+  // Try models in order — if quota exhausted on one, try next
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-8b"];
+  let lastErr: unknown;
+  for (const modelName of models) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const prompt = FRAMEWORK_PROMPTS[framework] ?? FRAMEWORK_PROMPTS.html;
+      const result = await model.generateContent([
+        { text: prompt },
+        { inlineData: { mimeType: mediaType as "image/png" | "image/jpeg" | "image/webp", data: imageBase64 } },
+      ]);
+      const response = result.response;
+      return {
+        code: cleanCode(response.text()),
+        usage: {
+          input_tokens: response.usageMetadata?.promptTokenCount ?? 0,
+          output_tokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+        },
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Only retry on quota/rate errors
+      if (msg.includes("429") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+        lastErr = e;
+        continue;
+      }
+      throw e; // Non-quota error — re-throw immediately
+    }
+  }
+  throw lastErr;
+}
+
+// Keep old signature compat — unused but satisfies linter
+async function _generateWithGeminiOld(
+  imageBase64: string,
+  mediaType: string,
+  framework: string,
+  apiKey: string
+): Promise<{ code: string; usage: { input_tokens: number; output_tokens: number } }> {
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   const prompt = FRAMEWORK_PROMPTS[framework] ?? FRAMEWORK_PROMPTS.html;
 
