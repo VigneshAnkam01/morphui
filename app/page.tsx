@@ -52,8 +52,6 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"code" | "preview">("code");
-  const [apiKey, setApiKey] = useState("");
-  const [showApiInput, setShowApiInput] = useState(false);
 
   const handleImage = useCallback((b64: string, m: string) => {
     setImageB64(b64); setMime(m); setResult(null); setError(null);
@@ -89,26 +87,19 @@ export default function Home() {
     if (!imageB64) return;
     setLoading(true); setError(null); setResult(null);
     try {
-      // Always compress before sending
       const compressed = await compressImage(imageB64, mime);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: compressed,
-          mediaType: "image/jpeg",
-          framework,
-          apiKey: apiKey || undefined,
-        }),
+        body: JSON.stringify({ imageBase64: compressed, mediaType: "image/jpeg", framework }),
       });
-      // Handle non-JSON responses (e.g. Vercel 413 / 500 HTML pages)
       const text = await res.text();
       let data: Record<string, unknown>;
       try {
         data = JSON.parse(text);
       } catch {
-        if (res.status === 413) throw new Error("Image too large. Try a smaller or lower-resolution photo.");
-        throw new Error(`Server error (${res.status}). Check your API key.`);
+        if (res.status === 413) throw new Error("Image too large. Try a smaller photo.");
+        throw new Error(`Server error (${res.status}). Please try again.`);
       }
       if (!res.ok) throw new Error((data.error as string) || "Generation failed");
       setResult(data as unknown as Result);
@@ -146,46 +137,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* API key pill */}
-        {!apiKey && (
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, padding: "0 20px" }}>
-            {!showApiInput ? (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ cursor: "pointer", border: "1px solid rgba(34,211,238,0.25)", background: "rgba(34,211,238,0.06)", padding: "6px 14px", borderRadius: 99, fontSize: 12, color: "var(--cyan)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
-                >
-                  ✦ Get free Gemini API key
-                </a>
-                <button
-                  onClick={() => setShowApiInput(true)}
-                  style={{ cursor: "pointer", border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)", padding: "6px 14px", borderRadius: 99, fontSize: 12, color: "var(--amber)", fontWeight: 600 }}
-                >
-                  ⚠ Enter API key
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: 8, alignItems: "center", background: "var(--card)", border: "1px solid var(--border-hi)", borderRadius: 12, padding: "8px 12px", width: "100%", maxWidth: 500 }}>
-                <span style={{ fontSize: 11, color: "var(--text3)", whiteSpace: "nowrap" }}>AIza… or sk-ant…</span>
-                <input
-                  id="api-key-input"
-                  type="password"
-                  placeholder="Paste Gemini (AIza…) or Anthropic (sk-ant…) key"
-                  value={apiKey}
-                  onChange={e => setApiKey(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && setShowApiInput(false)}
-                  style={{ flex: 1, background: "none", border: "none", outline: "none", color: "var(--text)", fontSize: 13, fontFamily: "var(--mono)" }}
-                  autoFocus
-                />
-                <button onClick={() => setShowApiInput(false)} className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }}>
-                  {apiKey ? "✓" : "✕"}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* Workspace */}
         <div
@@ -254,7 +206,7 @@ export default function Home() {
       </main>
 
       <footer style={{ borderTop: "1px solid var(--border)", padding: "12px 20px", textAlign: "center", position: "relative", zIndex: 1 }}>
-        <p style={{ fontSize: 11, color: "var(--text3)" }}>morphui · powered by Claude AI</p>
+        <p style={{ fontSize: 11, color: "var(--text3)" }}>morphui · free AI-powered UI generation</p>
         <AdminAccess />
       </footer>
 
